@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.Collections.Generic;
+using System.IO;
 
 namespace WebView2_testing
 {
@@ -21,7 +22,7 @@ namespace WebView2_testing
 
         #region Constructor
         
-        public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, string xApiKey)
+        public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, Client.Configuration config)
         {
             _merchant = merchant;
             _processor = processor;
@@ -36,10 +37,18 @@ namespace WebView2_testing
             submitButton.Visible = mode == FormMode.Edit;
 
             this.Resize += new System.EventHandler(this.Form_Resize);
-            Form_Resize(this, EventArgs.Empty);
+
+            string url = GetRequestUrlString(config, merchant, processor, mode);
+            webView.CoreWebView2.NavigateWithWebResourceRequest(
+                webView.CoreWebView2.Environment.CreateWebResourceRequest(
+                    url, "POST", EncodePostBody(formRequest), EncodePostHeader(config))
+                );
         }
 
         #endregion
+
+        public string GetRequestUrlString(Client.Configuration config, string merchant, string processor, FormMode mode) =>
+            config.BasePath + $"/form/{processor}/{merchant}/{mode.ToString().ToLower()}";
 
         #region Encoding / Decoding
 
@@ -100,9 +109,14 @@ namespace WebView2_testing
             return headerBuilder.ToString();
         }
 
-        protected byte[] EncodePostBody(Model.FormRequest formRequest)
+        protected MemoryStream EncodePostBody(Model.FormRequest formRequest)
         {
-            return Encoding.UTF8.GetBytes(formRequest.ToJson());
+            string postDataString = formRequest.ToJson();
+            byte[] postData = Encoding.UTF8.GetBytes(postDataString);
+            MemoryStream postDataStream = new MemoryStream(postDataString.Length);
+            postDataStream.Write(postData, 0, postData.Length);
+            postDataStream.Seek(0, SeekOrigin.Begin);
+            return postDataStream;
         }
 
         #endregion
