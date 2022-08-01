@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 
 namespace WebView2_testing
 {
@@ -60,8 +61,8 @@ namespace WebView2_testing
         protected async Task<string> GetCurrentHtmlDocumentAsString()
         {
             var html = await webView.CoreWebView2.ExecuteScriptAsync("document.body.outerHTML");
-            html = System.Net.WebUtility.HtmlDecode(UnescapeCodes(html, true));
-            return html;
+            var unescapedHtml = System.Net.WebUtility.HtmlDecode(UnescapeCodes(html, true));
+            return unescapedHtml;
         }
 
         protected HtmlDocument GetHtmlDocument(string html)
@@ -84,20 +85,34 @@ namespace WebView2_testing
 
         protected static string UnescapeCodes(string src, bool doubleUnescape = false)
         {
-            if (doubleUnescape)
-                src = src.Replace(@"\\", @"\");
+            var result = UnescapeUnicodes(src);
+            result = result.Replace("\\\\n", "\n");
+            result = result.Replace("\\\n", "\n");
+            result = result.Replace("\\", "");
+            //if (doubleUnescape)
+            //    src = src.Replace(@"\\", @"\");
 
-            var rx = new Regex("\\\\([0-9A-Fa-f]+)");
-            var res = new StringBuilder();
-            var pos = 0;
-            foreach (Match m in rx.Matches(src))
-            {
-                res.Append(src.Substring(pos, m.Index - pos));
-                pos = m.Index + m.Length;
-                res.Append((char)Convert.ToInt32(m.Groups[1].ToString(), 16));
-            }
-            res.Append(src.Substring(pos));
-            return res.ToString();
+            //var rx = new Regex("\\\\([0-9A-Fa-f]+)");
+            //var res = new StringBuilder();
+            //var pos = 0;
+            //foreach (Match m in rx.Matches(src))
+            //{
+            //    res.Append(src.Substring(pos, m.Index - pos));
+            //    pos = m.Index + m.Length;
+            //    res.Append((char)Convert.ToInt32(m.Groups[1].ToString(), 16));
+            //}
+            //res.Append(src.Substring(pos));
+            //return res.ToString();
+            return result;
+        }
+
+        protected static string UnescapeUnicodes(string src)
+        {
+            return Regex.Replace(
+                src,
+                @"\\[Uu]([0-9A-Fa-f]{4})",
+                m => char.ToString(
+                    (char)ushort.Parse(m.Groups[1].Value, NumberStyles.AllowHexSpecifier)));
         }
 
         protected string EncodePostHeader(Client.Configuration config)
