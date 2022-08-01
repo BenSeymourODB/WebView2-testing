@@ -38,14 +38,19 @@ namespace WebView2_testing
 
             this.Resize += new System.EventHandler(this.Form_Resize);
 
-            string url = GetRequestUrlString(config, merchant, processor, mode);
-            webView.CoreWebView2.NavigateWithWebResourceRequest(
-                webView.CoreWebView2.Environment.CreateWebResourceRequest(
-                    url, "POST", EncodePostBody(formRequest), EncodePostHeader(config))
-                );
+            EventHandler<CoreWebView2InitializationCompletedEventArgs> loadFormOnReady = (sender, args) =>
+            {
+                string url = GetRequestUrlString(config, merchant, processor, mode);
+                var request = webView.CoreWebView2.Environment.CreateWebResourceRequest(
+                        url, "POST", EncodePostBody(formRequest), EncodePostHeader(config));
+                webView.CoreWebView2.NavigateWithWebResourceRequest(request);
+            };
+            webView.CoreWebView2InitializationCompleted += loadFormOnReady;
         }
 
         #endregion
+
+
 
         public string GetRequestUrlString(Client.Configuration config, string merchant, string processor, FormMode mode) =>
             config.BasePath + $"/form/{processor}/{merchant}/{mode.ToString().ToLower()}";
@@ -100,7 +105,9 @@ namespace WebView2_testing
             StringBuilder headerBuilder = new StringBuilder();
             foreach (KeyValuePair<string, string> header in config.DefaultHeader)
             {
-                headerBuilder.Append(header.Key + ": " + header.Value + "\r\n");
+                // WebView2 doesn't like when you try to set some headers manually
+                if(header.Key != "Host")
+                    headerBuilder.Append(header.Key + ": " + header.Value + "\r\n");
             }
             foreach (KeyValuePair<string, string> header in config.ApiKey)
             {
@@ -142,6 +149,11 @@ namespace WebView2_testing
         {
             _ = ResizeWindowByDocumentSize();
             _resultDocument = await GetCurrentHtmlDocument();
+        }
+
+        protected async void webView_CoreWebView2Ready(EventArgs e)
+        {
+
         }
         #endregion
 
