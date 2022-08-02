@@ -162,13 +162,8 @@ namespace WebView2_testing
         #region Events
         protected async void webView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
         {
-            _ = ResizeWindowByDocumentSize();
+            _ = ResizeForOptimalFit();
             _resultDocument = await GetCurrentHtmlDocument();
-        }
-
-        protected async void webView_CoreWebView2Ready(EventArgs e)
-        {
-
         }
         #endregion
 
@@ -215,6 +210,26 @@ namespace WebView2_testing
             this.PerformLayout();
 
             this.Top = 0;
+        }
+
+        private async Task ResizeForOptimalFit()
+        {
+            await ResizeWindowByDocumentSize();
+            ResizeYToExcludeTaskbar();
+        }
+
+        private void ResizeYToExcludeTaskbar()
+        {
+            int bottomOfUsableArea = GetUsableMonitorArea().Bottom;
+            if (this.Bottom > bottomOfUsableArea)
+            {
+                this.Size = new Size(this.Width, this.Height - (this.Bottom - bottomOfUsableArea));
+            }
+        }
+
+        private Rectangle GetUsableMonitorArea()
+        {
+            return Screen.FromHandle(this.Handle).WorkingArea;
         }
     }
 
