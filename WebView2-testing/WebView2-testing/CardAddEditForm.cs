@@ -58,10 +58,16 @@ namespace WebView2_testing
 
         #region Encoding / Decoding
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>NULL or HTML string</returns>
         protected async Task<string> GetCurrentHtmlDocumentAsString()
         {
             var html = await webView.CoreWebView2.ExecuteScriptAsync("document.body.outerHTML");
-            var unescapedHtml = System.Net.WebUtility.HtmlDecode(UnescapeCodes(html, true));
+            var unescapedHtml = (string.IsNullOrEmpty(html) || html == "null") ? 
+                null : 
+                System.Net.WebUtility.HtmlDecode(UnescapeCodes(html));
             return unescapedHtml;
         }
 
@@ -78,31 +84,25 @@ namespace WebView2_testing
             return browser.Document;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>NULL or <see cref="HtmlDocument"/></returns>
         protected async Task<HtmlDocument> GetCurrentHtmlDocument()
         {
-            return GetHtmlDocument(await GetCurrentHtmlDocumentAsString());
+            var htmlString = await GetCurrentHtmlDocumentAsString();
+            return string.IsNullOrEmpty(htmlString) ? null : GetHtmlDocument(htmlString);
         }
 
-        protected static string UnescapeCodes(string src, bool doubleUnescape = false)
+        protected static string UnescapeCodes(string src)
         {
             var result = UnescapeUnicodes(src);
             result = result.Replace("\\\\n", "\n");
             result = result.Replace("\\\n", "\n");
+            result = result.Replace("\\n", "\n");
+            result = result.Replace("\\t", "\t");
+            result = result.Replace("\\\"", "\"");
             result = result.Replace("\\", "");
-            //if (doubleUnescape)
-            //    src = src.Replace(@"\\", @"\");
-
-            //var rx = new Regex("\\\\([0-9A-Fa-f]+)");
-            //var res = new StringBuilder();
-            //var pos = 0;
-            //foreach (Match m in rx.Matches(src))
-            //{
-            //    res.Append(src.Substring(pos, m.Index - pos));
-            //    pos = m.Index + m.Length;
-            //    res.Append((char)Convert.ToInt32(m.Groups[1].ToString(), 16));
-            //}
-            //res.Append(src.Substring(pos));
-            //return res.ToString();
             return result;
         }
 
