@@ -30,6 +30,7 @@
         {
             this.webView = new Microsoft.Web.WebView2.WinForms.WebView2();
             this.submitButton = new System.Windows.Forms.Button();
+            this.updateBillingAddressCheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.webView)).BeginInit();
             this.SuspendLayout();
             // 
@@ -56,17 +57,29 @@
             this.submitButton.Text = "Submit Changes";
             this.submitButton.UseVisualStyleBackColor = false;
             // 
-            // Form1
+            // updateBillingAddressCheckBox
+            // 
+            this.updateBillingAddressCheckBox.AutoSize = true;
+            this.updateBillingAddressCheckBox.Location = new System.Drawing.Point(13, 450);
+            this.updateBillingAddressCheckBox.Name = "updateBillingAddressCheckBox";
+            this.updateBillingAddressCheckBox.Size = new System.Drawing.Size(130, 17);
+            this.updateBillingAddressCheckBox.TabIndex = 2;
+            this.updateBillingAddressCheckBox.Text = "Update billing address";
+            this.updateBillingAddressCheckBox.UseVisualStyleBackColor = true;
+            // 
+            // CardAddEditForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 479);
+            this.Controls.Add(this.updateBillingAddressCheckBox);
             this.Controls.Add(this.submitButton);
             this.Controls.Add(this.webView);
-            this.Name = "Form1";
+            this.Name = "CardAddEditForm";
             this.Text = "Form1";
             ((System.ComponentModel.ISupportInitialize)(this.webView)).EndInit();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -74,6 +87,7 @@
 
         private Microsoft.Web.WebView2.WinForms.WebView2 webView;
         private System.Windows.Forms.Button submitButton;
+        private System.Windows.Forms.CheckBox updateBillingAddressCheckBox;
     }
 }
 

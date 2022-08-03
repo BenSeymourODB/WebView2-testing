@@ -18,7 +18,7 @@ namespace WebView2_testing
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Application.Run(new CardAddEditForm(CreateFormRequest(), "dh", "stripe", CardAddEditForm.FormMode.Create, GetConfiguration()));
+            Application.Run(new CardAddEditForm(CreateFormRequest(), "dh", "stripe", FormMode.Edit, GetConfiguration()));
         }
 
         public static string GetAppSetting(string key) => ConfigurationManager.AppSettings[key];

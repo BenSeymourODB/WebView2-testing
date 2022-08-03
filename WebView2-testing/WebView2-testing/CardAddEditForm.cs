@@ -15,27 +15,18 @@ namespace WebView2_testing
 {
     public partial class CardAddEditForm : Form, ICardAddEditForm
     {
-        public enum FormMode
-        {
-            Create,
-            Edit
-        }
-
         #region Constructor
         
         public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, Client.Configuration config)
         {
-            _merchant = merchant;
-            _processor = processor;
-            string formMode = mode.ToString().ToLower();
+            Merchant = merchant;
+            Processor = processor;
 
             //PaymentModelHelper.ValidateStringParams_FormProcessorMerchantFormModePost(processor, merchant, formMode);
 
             InitializeComponent();
             webView.NavigationCompleted +=
                 new EventHandler<CoreWebView2NavigationCompletedEventArgs>(webView_NavigationCompleted);
-            
-            submitButton.Visible = mode == FormMode.Edit;
 
             this.Resize += new System.EventHandler(this.Form_Resize);
 
@@ -51,10 +42,32 @@ namespace WebView2_testing
 
         #endregion
 
+        #region Private Methods
 
+        private void SetEditButtonVisibility()
+        {
+            submitButton.Visible = 
+                !PageHasSubmitEditButton() &&
+                Mode == FormMode.Edit;
+        }
+
+        private bool PageHasSubmitEditButton()
+        {
+            var buttons = ResultDocument?.Body.Children.GetElementsByName("button");
+            foreach (var button in buttons)
+            {
+
+            }
+        }
+
+        #endregion
+
+        #region Navigation
 
         public string GetRequestUrlString(Client.Configuration config, string merchant, string processor, FormMode mode) =>
             config.BasePath + $"/form/{processor}/{merchant}/{mode.ToString().ToLower()}";
+
+        #endregion
 
         #region Encoding / Decoding
 
@@ -145,17 +158,23 @@ namespace WebView2_testing
 
         #region ICardAddEditForm Members
 
-        private readonly string _merchant;
-        public string Merchant => _merchant;
+        public string Merchant { get; private set; }
+        public string Processor { get; private set; }
+        public FormMode Mode { get; private set; }
+        public string ResponseToken { get; private set; }
+        public HtmlDocument ResultDocument { get; set; }
+        public bool UpdateBillingAddress
+        {
+            get
+            {
+                if (this.updateBillingAddressCheckBox.Visible)
+                    return this.updateBillingAddressCheckBox.Checked;
+                else
+                    return false;
+            }
+        }
 
-        private readonly string _processor;
-        public string Processor => _processor;
-
-        private string _responseToken;
-        public string ResponseToken => _responseToken;
-
-        private HtmlDocument _resultDocument;
-        public HtmlDocument ResultDocument => _resultDocument;
+        public DialogResult LaunchAndAwaitResponse() => this.ShowDialog();
 
         #endregion
 
@@ -163,7 +182,7 @@ namespace WebView2_testing
         protected async void webView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             _ = ResizeForOptimalFit();
-            _resultDocument = await GetCurrentHtmlDocument();
+            ResultDocument = await GetCurrentHtmlDocument();
         }
         #endregion
 
