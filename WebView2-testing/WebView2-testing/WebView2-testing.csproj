@@ -73,6 +73,7 @@
     <Compile Include="CardAddEditForm.Designer.cs">
       <DependentUpon>CardAddEditForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="CardAddEditFormTokenBridge.cs" />
     <Compile Include="FormMode.cs" />
     <Compile Include="ICardAddEditForm.cs" />
     <Compile Include="Program.cs" />

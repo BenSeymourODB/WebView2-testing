@@ -53,11 +53,17 @@ namespace WebView2_testing
 
         private bool PageHasSubmitEditButton()
         {
-            var buttons = ResultDocument?.Body.Children.GetElementsByName("button");
-            foreach (var button in buttons)
+            bool found = false;
+            HtmlElementCollection buttons = ResultDocument?.Body.Children.GetElementsByName("button");
+            if (buttons != null)
             {
-
+                foreach (HtmlElement button in buttons)
+                {
+                    if (button.InnerText.Contains("Edit Profile"))
+                        found = true;
+                }
             }
+            return found;
         }
 
         #endregion
@@ -183,6 +189,7 @@ namespace WebView2_testing
         {
             _ = ResizeForOptimalFit();
             ResultDocument = await GetCurrentHtmlDocument();
+            SetEditButtonVisibility();
         }
         #endregion
 
