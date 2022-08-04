@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace WebView2_testing
 {
@@ -18,5 +14,12 @@ namespace WebView2_testing
     public class CardAddEditFormTokenBridge
     {
         public string CCAddToken { get; set; }
+
+        public void HandleError(string message, string url, string lineNumber)
+        {
+            MessageBox.Show(
+                $"The page at {url} encountered an error on line {lineNumber}:\n" +
+                message, "Error");
+        }
     }
 }

@@ -15,8 +15,14 @@ namespace WebView2_testing
 {
     public partial class CardAddEditForm : Form, ICardAddEditForm
     {
+        #region Private Fields
+
+        private const string _jsGetStripeTokenStringFromAddedNodes = "mutation.addedNodes.item(0).value";
+
+        #endregion
+
         #region Constructor
-        
+
         public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, Client.Configuration config)
         {
             Merchant = merchant;
@@ -75,7 +81,73 @@ namespace WebView2_testing
 
         #endregion
 
-        #region Encoding / Decoding
+        #region Form Capture
+
+        private CardAddEditFormTokenBridge Bridge = new CardAddEditFormTokenBridge();
+
+        /// <summary>
+        /// Attach MutationObserver to a DOM element matching the query string.
+        /// </summary>
+        /// <remarks>
+        /// Credit to https://stackoverflow.com/a/62883088/5403341
+        /// </remarks>
+        /// <param name="theQuery"></param>
+        /// <returns></returns>
+        private async Task<string> CreateObserver(
+            string theQuery,
+            string hostObjectName,
+            string hostObjectProperty,
+            string jsVariableToCapture,
+            bool attributes = false,
+            bool subtree = false,
+            bool childList = false,
+            bool charData = false
+            )
+        {
+            string ScriptEl = @"
+                var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                        chrome.webview.hostObjects." + 
+                        hostObjectName + "." + hostObjectProperty + $" = {jsVariableToCapture};" + @"
+                    });
+                });
+
+            //everything
+            var observerConfig = {
+                attributes: " + attributes.ToString().ToLower() + @",
+                subtree: " + subtree.ToString().ToLower() + @",
+                childList: " + childList.ToString().ToLower() + @",
+                characterData: " + charData.ToString().ToLower() + @"
+            };
+
+                var targetNode = document.querySelector('" + theQuery + @"');
+                observer.observe(targetNode, observerConfig);";
+
+            return await ExecuteScript(ScriptEl);
+        }
+
+        private async Task<string> ExecuteScript(string code)
+        {
+            return await webView.ExecuteScriptAsync(code);
+        }
+
+        /// <summary>
+        /// Handle JS errors using a function on a given host object.
+        /// </summary>
+        /// <remarks>
+        /// The function must accept args (string message, string url, int lineNumber)
+        /// </remarks>
+        /// <param name="hostObjectName"></param>
+        /// <param name="hostObjectFnName"></param>
+        /// <returns></returns>
+        private async Task<string> AddErrorHandler(string hostObjectName, string hostObjectFnName)
+        {
+            return await ExecuteScript(@"window.onerror = function(message, url, lineNumber) 
+                { 
+                 chrome.webview.hostObjects." +
+                        hostObjectName + "." + hostObjectFnName + @"(message, url, lineNumber);
+                }");
+        }
 
         /// <summary>
         /// 
@@ -90,7 +162,7 @@ namespace WebView2_testing
             return unescapedHtml;
         }
 
-        protected HtmlDocument GetHtmlDocument(string html)
+        protected static HtmlDocument GetHtmlDocument(string html)
         {
             WebBrowser browser = new WebBrowser
             {
@@ -112,6 +184,10 @@ namespace WebView2_testing
             var htmlString = await GetCurrentHtmlDocumentAsString();
             return string.IsNullOrEmpty(htmlString) ? null : GetHtmlDocument(htmlString);
         }
+
+        #endregion
+
+        #region Encoding / Decoding
 
         protected static string UnescapeCodes(string src)
         {
@@ -189,6 +265,12 @@ namespace WebView2_testing
         {
             _ = ResizeForOptimalFit();
             ResultDocument = await GetCurrentHtmlDocument();
+            if(ResultDocument != null)
+            {
+                _ = this.CreateObserver("#payment-form", nameof(Bridge), nameof(Bridge.CCAddToken), 
+                    _jsGetStripeTokenStringFromAddedNodes, childList: true);
+                _ = this.AddErrorHandler(nameof(Bridge), );
+            }
             SetEditButtonVisibility();
         }
         #endregion
