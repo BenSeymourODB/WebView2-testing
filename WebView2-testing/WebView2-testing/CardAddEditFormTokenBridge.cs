@@ -1,25 +1,32 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace WebView2_testing
 {
     /// <summary>
-    /// 
+    /// Derivative of <see cref="MPXWebScriptingConnector"/> with <see cref="ClassInterfaceAttribute"/> = 
+    /// <see cref="ClassInterfaceType.AutoDual"/>
     /// </summary>
     /// <remarks>
-    /// Based on https://docs.microsoft.com/en-us/dotnet/api/microsoft.web.webview2.core.corewebview2.addhostobjecttoscript?view=webview2-dotnet-1.0.1264.42#microsoft-web-webview2-core-corewebview2-addhostobjecttoscript(system-string-system-object)
+    /// Based on examples from 
+    /// <a href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.web.webview2.core.corewebview2.addhostobjecttoscript"/>
     /// </remarks>
     [ClassInterface(ClassInterfaceType.AutoDual)]
     [ComVisible(true)]
-    public class CardAddEditFormTokenBridge
+    public class CardAddEditFormTokenBridge: MPXWebScriptingConnector
     {
-        public string CCAddToken { get; set; }
+        public CardAddEditFormTokenBridge(): base() { }
 
-        public void HandleError(string message, string url, string lineNumber)
+        public CardAddEditFormTokenBridge(Func<string, string> setCCTokenCallback, Action editCompletedCallback): base(setCCTokenCallback) 
         {
-            MessageBox.Show(
-                $"The page at {url} encountered an error on line {lineNumber}:\n" +
-                message, "Error");
+            SetEditEventCallback(editCompletedCallback);
         }
+
+        private Action editEventCallback;
+
+        public void SetEditEventCallback(Action editEventCallback) => this.editEventCallback = editEventCallback;
+
+        public void NotifyEditFinished() => this.editEventCallback?.Invoke();
     }
 }

@@ -15,9 +15,10 @@ namespace WebView2_testing
 {
     public partial class CardAddEditForm : Form, ICardAddEditForm
     {
-        #region Private Fields
+        #region Constants
 
-        private const string _jsGetStripeTokenStringFromAddedNodes = "mutation.addedNodes.item(0).value";
+        private const string _jsGetCCTokenStringFromAddedNodes = "mutation.addedNodes.item(0).value";
+        private const string _ccTokenParentElementId = "#payment-form";
 
         #endregion
 
@@ -25,10 +26,14 @@ namespace WebView2_testing
 
         public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, Client.Configuration config)
         {
+            //PaymentModelHelper.ValidateStringParams_FormProcessorMerchantFormModePost(processor, merchant, formModeString);
+
             Merchant = merchant;
             Processor = processor;
+            Mode = mode;
+            string formModeString = mode.ToString().ToLower();
 
-            //PaymentModelHelper.ValidateStringParams_FormProcessorMerchantFormModePost(processor, merchant, formMode);
+            Bridge = new CardAddEditFormTokenBridge(this.SetResponseToken, this.SetResultDocAndOKClose);
 
             InitializeComponent();
             webView.NavigationCompleted +=
@@ -38,7 +43,7 @@ namespace WebView2_testing
 
             EventHandler<CoreWebView2InitializationCompletedEventArgs> loadFormOnReady = (sender, args) =>
             {
-                string url = GetRequestUrlString(config, merchant, processor, mode);
+                string url = GetRequestUrlString(config.BasePath, merchant, processor, formModeString);
                 var request = webView.CoreWebView2.Environment.CreateWebResourceRequest(
                         url, "POST", EncodePostBody(formRequest), EncodePostHeader(config));
                 webView.CoreWebView2.NavigateWithWebResourceRequest(request);
@@ -52,15 +57,15 @@ namespace WebView2_testing
 
         private void SetEditButtonVisibility()
         {
-            submitButton.Visible = 
-                !PageHasSubmitEditButton() &&
-                Mode == FormMode.Edit;
+            submitButton.Visible =
+                Mode == FormMode.Edit &&
+                !PageHasSubmitEditButton();
         }
 
         private bool PageHasSubmitEditButton()
         {
             bool found = false;
-            HtmlElementCollection buttons = ResultDocument?.Body.Children.GetElementsByName("button");
+            HtmlElementCollection buttons = ResultDocument?.GetElementsByTagName("button");
             if (buttons != null)
             {
                 foreach (HtmlElement button in buttons)
@@ -72,18 +77,32 @@ namespace WebView2_testing
             return found;
         }
 
+        private string SetResponseToken(string token)
+        {
+            this.ResponseToken = token.Trim();
+            this.SetResultDocAndOKClose();
+            return this.ResponseToken;
+        }
+
+        private async void SetResultDocAndOKClose()
+        {
+            ResultDocument = await GetCurrentHtmlDocument();
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
         #endregion
 
         #region Navigation
 
-        public string GetRequestUrlString(Client.Configuration config, string merchant, string processor, FormMode mode) =>
-            config.BasePath + $"/form/{processor}/{merchant}/{mode.ToString().ToLower()}";
+        public string GetRequestUrlString(string basePath, string merchant, string processor, string formMode) =>
+            basePath + $"/form/{processor}/{merchant}/{formMode.ToString().ToLower()}";
 
         #endregion
 
         #region Form Capture
 
-        private CardAddEditFormTokenBridge Bridge = new CardAddEditFormTokenBridge();
+        private CardAddEditFormTokenBridge Bridge { get; set; }
 
         /// <summary>
         /// Attach MutationObserver to a DOM element matching the query string.
@@ -91,12 +110,12 @@ namespace WebView2_testing
         /// <remarks>
         /// Credit to https://stackoverflow.com/a/62883088/5403341
         /// </remarks>
-        /// <param name="theQuery"></param>
+        /// <param name="parentNodeId"></param>
         /// <returns></returns>
-        private async Task<string> CreateObserver(
-            string theQuery,
+        private async Task<string> CreateCCTokenObserver(
+            string parentNodeId,
             string hostObjectName,
-            string hostObjectProperty,
+            string hostObjectCCTokenReceiverMethodName,
             string jsVariableToCapture,
             bool attributes = false,
             bool subtree = false,
@@ -107,8 +126,8 @@ namespace WebView2_testing
             string ScriptEl = @"
                 var observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {
-                        chrome.webview.hostObjects." + 
-                        hostObjectName + "." + hostObjectProperty + $" = {jsVariableToCapture};" + @"
+                        chrome.webview.hostObjects." +
+                        hostObjectName + $".{hostObjectCCTokenReceiverMethodName}({jsVariableToCapture});" + @"
                     });
                 });
 
@@ -120,10 +139,25 @@ namespace WebView2_testing
                 characterData: " + charData.ToString().ToLower() + @"
             };
 
-                var targetNode = document.querySelector('" + theQuery + @"');
+                var targetNode = document.querySelector('" + parentNodeId + @"');
                 observer.observe(targetNode, observerConfig);";
 
             return await ExecuteScript(ScriptEl);
+        }
+
+        private async Task<string> CreateEditEventListener(
+            string parentNodeId,
+            string hostObjectName,
+            string hostObjectEditCompletedMethodName
+            )
+        {
+            string script = @"
+                var eventParent = document.querySelector('" + parentNodeId + @"');
+                eventParent.addEventListener('edit', function (event) {
+                    chrome.webview.hostObjects." +
+                        $"{hostObjectName}.{hostObjectEditCompletedMethodName}()" + @";
+                });";
+            return await ExecuteScript(script);
         }
 
         private async Task<string> ExecuteScript(string code)
@@ -155,7 +189,7 @@ namespace WebView2_testing
         /// <returns>NULL or HTML string</returns>
         protected async Task<string> GetCurrentHtmlDocumentAsString()
         {
-            var html = await webView.CoreWebView2.ExecuteScriptAsync("document.body.outerHTML");
+            var html = await ExecuteScript("document.body.outerHTML");
             var unescapedHtml = (string.IsNullOrEmpty(html) || html == "null") ? 
                 null : 
                 System.Net.WebUtility.HtmlDecode(UnescapeCodes(html));
@@ -261,17 +295,32 @@ namespace WebView2_testing
         #endregion
 
         #region Events
+
+        /// <summary>
+        /// On navigation completed, if page is loaded, add observers to get data out of the page on submit
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         protected async void webView_NavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             _ = ResizeForOptimalFit();
             ResultDocument = await GetCurrentHtmlDocument();
             if(ResultDocument != null)
             {
-                _ = this.CreateObserver("#payment-form", nameof(Bridge), nameof(Bridge.CCAddToken), 
-                    _jsGetStripeTokenStringFromAddedNodes, childList: true);
-                _ = this.AddErrorHandler(nameof(Bridge), );
+                // Add JavaScript-to-C# bridge object
+                webView.CoreWebView2.AddHostObjectToScript(nameof(Bridge), Bridge);
+                
+                // Watch for CC token being added to Create form after submit
+                _ = this.CreateCCTokenObserver(_ccTokenParentElementId, nameof(Bridge), nameof(Bridge.SetCCToken),
+                    _jsGetCCTokenStringFromAddedNodes, childList: true);
+                
+                // Watch for Edit form submit
+                _ = this.CreateEditEventListener(_ccTokenParentElementId, nameof(Bridge), nameof(Bridge.NotifyEditFinished));
+                
+                _ = this.AddErrorHandler(nameof(Bridge), nameof(Bridge.HandleError));
+
+                SetEditButtonVisibility();
             }
-            SetEditButtonVisibility();
         }
         #endregion
 
@@ -281,8 +330,6 @@ namespace WebView2_testing
         {
             webView.Size = this.ClientSize - new System.Drawing.Size(webView.Location);
             webView.Height = this.ClientSize.Height - submitButton.Height; 
-            submitButton.Left = this.ClientSize.Width - submitButton.Width;
-            submitButton.Top = this.ClientSize.Height - submitButton.Height;
         }
 
         private async Task<Size> GetWebViewDocumentSize()
@@ -290,10 +337,10 @@ namespace WebView2_testing
             string getDimFmtString = "var body = document.body, html = document.documentElement; " +
                 "Math.max( body.scroll{0}, body.offset{0}, html.client{0}, html.scroll{0}, html.offset{0} );";
             int height = int.Parse( 
-                await this.webView.CoreWebView2.ExecuteScriptAsync( 
+                await ExecuteScript( 
                     string.Format(getDimFmtString, "Height")));
             int width = int.Parse(
-                await this.webView.CoreWebView2.ExecuteScriptAsync(
+                await ExecuteScript(
                     string.Format(getDimFmtString, "Width")));
             return new Size(width, height);
         }

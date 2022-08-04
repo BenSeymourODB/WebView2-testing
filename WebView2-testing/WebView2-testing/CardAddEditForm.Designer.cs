@@ -48,17 +48,20 @@
             // 
             // submitButton
             // 
+            this.submitButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.submitButton.BackColor = System.Drawing.SystemColors.HotTrack;
             this.submitButton.ForeColor = System.Drawing.SystemColors.ControlLightLight;
-            this.submitButton.Location = new System.Drawing.Point(649, 444);
+            this.submitButton.Location = new System.Drawing.Point(649, 441);
             this.submitButton.Name = "submitButton";
             this.submitButton.Size = new System.Drawing.Size(139, 32);
             this.submitButton.TabIndex = 1;
             this.submitButton.Text = "Submit Changes";
             this.submitButton.UseVisualStyleBackColor = false;
+            this.submitButton.Visible = false;
             // 
             // updateBillingAddressCheckBox
             // 
+            this.updateBillingAddressCheckBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.updateBillingAddressCheckBox.AutoSize = true;
             this.updateBillingAddressCheckBox.Location = new System.Drawing.Point(13, 450);
             this.updateBillingAddressCheckBox.Name = "updateBillingAddressCheckBox";
@@ -66,6 +69,7 @@
             this.updateBillingAddressCheckBox.TabIndex = 2;
             this.updateBillingAddressCheckBox.Text = "Update billing address";
             this.updateBillingAddressCheckBox.UseVisualStyleBackColor = true;
+            this.updateBillingAddressCheckBox.Visible = false;
             // 
             // CardAddEditForm
             // 
@@ -76,7 +80,7 @@
             this.Controls.Add(this.submitButton);
             this.Controls.Add(this.webView);
             this.Name = "CardAddEditForm";
-            this.Text = "Form1";
+            this.Text = "Credit Card Entry Form";
             ((System.ComponentModel.ISupportInitialize)(this.webView)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

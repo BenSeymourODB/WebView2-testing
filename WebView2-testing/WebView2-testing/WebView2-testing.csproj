@@ -76,6 +76,7 @@
     <Compile Include="CardAddEditFormTokenBridge.cs" />
     <Compile Include="FormMode.cs" />
     <Compile Include="ICardAddEditForm.cs" />
+    <Compile Include="MPXWebScriptingConnector.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="CardAddEditForm.resx">
