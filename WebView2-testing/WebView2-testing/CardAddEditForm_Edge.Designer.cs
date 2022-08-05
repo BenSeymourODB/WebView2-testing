@@ -58,6 +58,7 @@
             this.submitButton.Text = "Submit Changes";
             this.submitButton.UseVisualStyleBackColor = false;
             this.submitButton.Visible = false;
+            this.submitButton.Click += new System.EventHandler(this.submitButton_Click);
             // 
             // updateBillingAddressCheckBox
             // 
@@ -71,7 +72,7 @@
             this.updateBillingAddressCheckBox.UseVisualStyleBackColor = true;
             this.updateBillingAddressCheckBox.Visible = false;
             // 
-            // CardAddEditForm
+            // CardAddEditForm_Edge
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -79,7 +80,7 @@
             this.Controls.Add(this.updateBillingAddressCheckBox);
             this.Controls.Add(this.submitButton);
             this.Controls.Add(this.webView);
-            this.Name = "CardAddEditForm";
+            this.Name = "CardAddEditForm_Edge";
             this.Text = "Credit Card Entry Form";
             ((System.ComponentModel.ISupportInitialize)(this.webView)).EndInit();
             this.ResumeLayout(false);

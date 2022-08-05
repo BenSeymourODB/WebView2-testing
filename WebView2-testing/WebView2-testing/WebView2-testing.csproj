@@ -67,11 +67,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CardAddEditForm.cs">
+    <Compile Include="CardAddEditForm_Edge.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="CardAddEditForm.Designer.cs">
-      <DependentUpon>CardAddEditForm.cs</DependentUpon>
+    <Compile Include="CardAddEditForm_Edge.Designer.cs">
+      <DependentUpon>CardAddEditForm_Edge.cs</DependentUpon>
     </Compile>
     <Compile Include="CardAddEditFormTokenBridge.cs" />
     <Compile Include="FormMode.cs" />
@@ -79,8 +79,8 @@
     <Compile Include="MPXWebScriptingConnector.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="CardAddEditForm.resx">
-      <DependentUpon>CardAddEditForm.cs</DependentUpon>
+    <EmbeddedResource Include="CardAddEditForm_Edge.resx">
+      <DependentUpon>CardAddEditForm_Edge.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
