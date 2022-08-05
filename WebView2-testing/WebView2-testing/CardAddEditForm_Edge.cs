@@ -19,6 +19,7 @@ namespace WebView2_testing
 
         private const string _jsGetCCTokenStringFromAddedNodes = "mutation.addedNodes.item(0).value";
         private const string _ccTokenParentElementId = "#payment-form";
+        private const string _jsEnterKeyMessage = "EnterKeyPressed";
         private const string _jsCaptureInputValueProperties =
             @"document.querySelector('#expirationMonth').setAttribute('value', document.querySelector('#expirationMonth').value);
             document.querySelector('#expirationYear').setAttribute('value', document.querySelector('#expirationYear').value);";
@@ -171,6 +172,29 @@ namespace WebView2_testing
                 let editEvent = new Event('edit');
                 form.dispatchEvent(editEvent);  
             ";
+            return await ExecuteScript(script);
+        }
+
+        /// <summary>
+        /// Add Enter key listener/messager
+        /// </summary>
+        /// <remarks>
+        /// Key event listener workaround for WebView2.WinForms courtesy of DjSt3rios on 
+        /// <a href="https://github.com/MicrosoftEdge/WebView2Feedback/issues/536#issuecomment-708525646">
+        /// github.com/MicrosoftEdge/WebView2Feedback
+        /// </a>
+        /// </remarks>
+        private async Task<string> CreateEnterKeyListener()
+        {
+            string script =
+                @"document.body.addEventListener('keydown',event => 
+                { 
+                    if (event.isComposing || event.keyCode === 229)
+                        return; 
+                    if(event.code === 'Enter' || event.code === 'NumpadEnter')
+                        " + $"window.chrome.webview.postMessage('{_jsEnterKeyMessage}'); " + @"
+                });";
+            webView.CoreWebView2.WebMessageReceived += browser_KeyDown;
             return await ExecuteScript(script);
         }
 
@@ -331,6 +355,10 @@ namespace WebView2_testing
                 // Watch for Edit form submit
                 _ = this.CreateEditEventListener(_ccTokenParentElementId, nameof(Bridge), nameof(Bridge.NotifyEditFinished));
 
+                // Watch for Enter key press
+                _ = this.CreateEnterKeyListener();
+
+                // Pass errors back to app-owned dialog
                 _ = this.AddErrorHandler(nameof(Bridge), nameof(Bridge.HandleError));
 
                 SetEditButtonVisibility();
@@ -340,6 +368,22 @@ namespace WebView2_testing
         private void submitButton_Click(object sender, EventArgs e)
         {
             _ = DispatchEditEvent();
+        }
+
+        /// <summary>
+        /// Handle an Enter key press from the browser control.
+        /// </summary>
+        /// <remarks>
+        /// Conditioned upon the custom <see cref="submitButton"/> being visible, 
+        /// which means the page doesn't have its own submit button, 
+        /// which means we're not working with the version of the page that handles Enter presses on its own.
+        /// </remarks>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        private void browser_KeyDown(object sender, CoreWebView2WebMessageReceivedEventArgs args)
+        {
+            if (args.WebMessageAsJson.Contains(_jsEnterKeyMessage) && this.submitButton.Visible)
+                submitButton_Click(sender, args);
         }
 
         #endregion

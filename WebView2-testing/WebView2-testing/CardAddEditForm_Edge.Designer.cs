@@ -80,6 +80,7 @@
             this.Controls.Add(this.updateBillingAddressCheckBox);
             this.Controls.Add(this.submitButton);
             this.Controls.Add(this.webView);
+            this.KeyPreview = true;
             this.Name = "CardAddEditForm_Edge";
             this.Text = "Credit Card Entry Form";
             ((System.ComponentModel.ISupportInitialize)(this.webView)).EndInit();
