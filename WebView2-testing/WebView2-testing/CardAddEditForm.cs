@@ -13,18 +13,21 @@ using System.Globalization;
 
 namespace WebView2_testing
 {
-    public partial class CardAddEditForm : Form, ICardAddEditForm
+    public partial class CardAddEditForm_Edge : Form, ICardAddEditForm
     {
         #region Constants
 
         private const string _jsGetCCTokenStringFromAddedNodes = "mutation.addedNodes.item(0).value";
         private const string _ccTokenParentElementId = "#payment-form";
+        private const string _jsCaptureInputValueProperties =
+            @"document.querySelector('#expirationMonth').setAttribute('value', document.querySelector('#expirationMonth').value);
+            document.querySelector('#expirationYear').setAttribute('value', document.querySelector('#expirationYear').value);";
 
         #endregion
 
         #region Constructor
 
-        public CardAddEditForm(Model.FormRequest formRequest, string merchant, string processor, FormMode mode, Client.Configuration config)
+        public CardAddEditForm_Edge(Model.FormRequest formRequest, string processor, string merchant, FormMode mode, Client.Configuration config)
         {
             //PaymentModelHelper.ValidateStringParams_FormProcessorMerchantFormModePost(processor, merchant, formModeString);
 
@@ -100,7 +103,7 @@ namespace WebView2_testing
 
         #endregion
 
-        #region Form Capture
+        #region JavaScript Interop
 
         private CardAddEditFormTokenBridge Bridge { get; set; }
 
@@ -154,9 +157,20 @@ namespace WebView2_testing
             string script = @"
                 var eventParent = document.querySelector('" + parentNodeId + @"');
                 eventParent.addEventListener('edit', function (event) {
+                    " + _jsCaptureInputValueProperties + @"
                     chrome.webview.hostObjects." +
                         $"{hostObjectName}.{hostObjectEditCompletedMethodName}()" + @";
                 });";
+            return await ExecuteScript(script);
+        }
+
+        private async Task<string> DispatchEditEvent()
+        {
+            string script = @"
+                var eventParent = document.querySelector('" + _ccTokenParentElementId + @"');
+                let editEvent = new Event('edit');
+                form.dispatchEvent(editEvent);  
+            ";
             return await ExecuteScript(script);
         }
 
@@ -190,8 +204,8 @@ namespace WebView2_testing
         protected async Task<string> GetCurrentHtmlDocumentAsString()
         {
             var html = await ExecuteScript("document.body.outerHTML");
-            var unescapedHtml = (string.IsNullOrEmpty(html) || html == "null") ? 
-                null : 
+            var unescapedHtml = (string.IsNullOrEmpty(html) || html == "null") ?
+                null :
                 System.Net.WebUtility.HtmlDecode(UnescapeCodes(html));
             return unescapedHtml;
         }
@@ -250,7 +264,7 @@ namespace WebView2_testing
             foreach (KeyValuePair<string, string> header in config.DefaultHeader)
             {
                 // WebView2 doesn't like when you try to set some headers manually
-                if(header.Key != "Host")
+                if (header.Key != "Host")
                     headerBuilder.Append(header.Key + ": " + header.Value + "\r\n");
             }
             foreach (KeyValuePair<string, string> header in config.ApiKey)
@@ -305,23 +319,29 @@ namespace WebView2_testing
         {
             _ = ResizeForOptimalFit();
             ResultDocument = await GetCurrentHtmlDocument();
-            if(ResultDocument != null)
+            if (ResultDocument != null)
             {
                 // Add JavaScript-to-C# bridge object
                 webView.CoreWebView2.AddHostObjectToScript(nameof(Bridge), Bridge);
-                
+
                 // Watch for CC token being added to Create form after submit
                 _ = this.CreateCCTokenObserver(_ccTokenParentElementId, nameof(Bridge), nameof(Bridge.SetCCToken),
                     _jsGetCCTokenStringFromAddedNodes, childList: true);
-                
+
                 // Watch for Edit form submit
                 _ = this.CreateEditEventListener(_ccTokenParentElementId, nameof(Bridge), nameof(Bridge.NotifyEditFinished));
-                
+
                 _ = this.AddErrorHandler(nameof(Bridge), nameof(Bridge.HandleError));
 
                 SetEditButtonVisibility();
             }
         }
+
+        private void submitButton_Click(object sender, EventArgs e)
+        {
+            _ = DispatchEditEvent();
+        }
+
         #endregion
 
         #region Resizing
@@ -329,15 +349,15 @@ namespace WebView2_testing
         private void Form_Resize(object sender, EventArgs e)
         {
             webView.Size = this.ClientSize - new System.Drawing.Size(webView.Location);
-            webView.Height = this.ClientSize.Height - submitButton.Height; 
+            webView.Height = this.ClientSize.Height - submitButton.Height;
         }
 
         private async Task<Size> GetWebViewDocumentSize()
         {
             string getDimFmtString = "var body = document.body, html = document.documentElement; " +
                 "Math.max( body.scroll{0}, body.offset{0}, html.client{0}, html.scroll{0}, html.offset{0} );";
-            int height = int.Parse( 
-                await ExecuteScript( 
+            int height = int.Parse(
+                await ExecuteScript(
                     string.Format(getDimFmtString, "Height")));
             int width = int.Parse(
                 await ExecuteScript(

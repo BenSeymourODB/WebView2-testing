@@ -1,6 +1,6 @@
 ﻿namespace WebView2_testing
 {
-    partial class CardAddEditForm
+    partial class CardAddEditForm_Edge
     {
         /// <summary>
         /// Required designer variable.
